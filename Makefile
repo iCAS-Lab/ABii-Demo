@@ -2,6 +2,9 @@ run:
 	chmod 700 scripts/run.sh
 	scripts/run.sh
 
+test:
+	python3 src/main.py
+
 libedgetpu:
 	echo "deb https://packages.cloud.google.com/apt coral-edgetpu-stable main" | sudo tee /etc/apt/sources.list.d/coral-edgetpu.list
 	curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add -
