@@ -18,7 +18,7 @@ class Camera(QLabel):
         QLabel.__init__(self)
         self.video_size = QSize(1920, 1080)
         self.setup_camera()
-        self.detection_model = Inference(mode='pose')
+        self.detection_model = Inference()
 
     def setup_camera(self):
         """Initialize camera.

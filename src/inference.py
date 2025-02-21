@@ -19,17 +19,19 @@ class Inference(QObject):
 
     def __init__(
         self,
-        mode: str = 'detect'
+        mode: str = 'default_detection'
     ):
         super().__init__()
         # List of models
-        self.detect_model = './src/models/face_det.pt'
+        self.head_detect = './src/models/face_det.pt'
         self.emotion_model = './src/models/emotion.pt'
         self.pose_model = './src/models/yolo11n-pose.pt'
+        self.detect_model = './src/models/yolo11n.pt'
 
         self.predict_funcs = {
-            'detect': self.detect,
-            'pose': self.pose
+            'detect_emotion': self.detect_emotion,
+            'pose': self.pose,
+            'default_detection': self.detect
         }
 
         # Sanity check the modes
@@ -42,6 +44,7 @@ class Inference(QObject):
         self.head_detection = None
         self.emotion_classifier = None
         self.pose_detection = None
+        self.default_detection = None
         self.load_models()
 
         # Original Image Size
@@ -92,24 +95,31 @@ class Inference(QObject):
         pass
 
     def load_models(self):
-        if self.mode == 'detect':
+        if self.mode == 'detect_emotion':
             del self.pose_detection
-            self.head_detection = YOLO(self.detect_model, task='detect')
+            del self.default_detection
+            self.head_detection = YOLO(self.head_detect, task='detect')
             self.emotion_classifier = self.emotion_model
         elif self.mode == 'pose':
             del self.head_detection
             del self.emotion_classifier
+            del self.default_detection
             self.pose_detection = YOLO(self.pose_model, task='pose')
+        elif self.mode == 'default_detection':
+            del self.head_detection
+            del self.emotion_classifier
+            del self.pose_detection
+            self.default_detection = YOLO(self.detect_model,  task='detect')
 
-    def detect(self, frame):
-        box_outputs = self.head_detection(frame, verbose=False)
-        classes: torch.Tensor = box_outputs[0].boxes.cls.int()
+    def detect_emotion(self, frame):
+        outputs = self.head_detection(frame, verbose=False)
+        classes: torch.Tensor = outputs[0].boxes.cls.int()
         classes = classes.numpy()
         classes = np.where(classes == 1)[0]
 
         # Convert types to numpy arrays
-        head_xyxy = box_outputs[0].boxes.xyxy.numpy()
-        head_xywh = box_outputs[0].boxes.xywh.numpy()
+        head_xyxy = outputs[0].boxes.xyxy.numpy()
+        head_xywh = outputs[0].boxes.xywh.numpy()
 
         # Only get the heads
         head_boxes_xyxy = head_xyxy[classes]
@@ -139,6 +149,27 @@ class Inference(QObject):
         # TODO: Get the emotion if spacebar is pressed
 
         # TODO: Sent emotion to ABii
+
+        return annotate.im
+
+    def detect(self, frame):
+        outputs = self.default_detection(frame, verbose=False)
+        class_dict = outputs[0].names
+        classes: torch.Tensor = outputs[0].boxes.cls.int()
+        classes = classes.numpy()
+        confidence = outputs[0].boxes.conf
+        # Convert types to numpy arrays
+        boxes_xyxy = outputs[0].boxes.xyxy.numpy()
+
+        # Annotate all boxes onto the frame, set the closest to green border and
+        # others to blue border
+        annotate = Annotator(frame)
+        for i, box in enumerate(boxes_xyxy):
+            annotate.box_label(
+                box,
+                label=f'{class_dict[classes[i]]} {confidence[i]:.2f}',
+                color=self.default_box_color
+            )
 
         return annotate.im
 
