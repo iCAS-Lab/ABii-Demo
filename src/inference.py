@@ -215,6 +215,7 @@ class Inference(QObject):
         self.abii_comm.send_fer_class(emotion)
 
     def detect(self, frame):
+        annotate = Annotator(frame)
         # Perform inference
         outputs = self.default_detection(frame, verbose=False)
         # Get the dictionary of class ids (key) mapped to their string class
@@ -223,13 +224,16 @@ class Inference(QObject):
         # Get the tensor containing the detected class ids
         classes: torch.Tensor = outputs[0].boxes.cls.int()
         classes = classes.numpy()
+        # TODO: Add number of detections here and possibly threshold the
+        #       confidence when displaying the results.
+        # if self.num_detections < 1:
+        #     return annotate.im
         # Get the confidence intervals
         confidence = outputs[0].boxes.conf
         # Convert types to numpy arrays
         boxes_xyxy = outputs[0].boxes.xyxy.numpy()
 
         # Annotate all boxes onto the frame with blue border
-        annotate = Annotator(frame)
         for i, box in enumerate(boxes_xyxy):
             annotate.box_label(
                 box,
@@ -264,12 +268,11 @@ class Inference(QObject):
         return annotate.im
 
     def detect_hand(self, frame):
+        annotate = Annotator(frame)
         hand_results = self.hand_detection(frame, verbose=False)
-
         # Update the number of detections
         self.num_detections = len(hand_results[0].keypoints.data)
         # print(len(hand_results[0].keypoints.data))
-        annotate = Annotator(frame)
         # Return early if there are no detections
         if self.num_detections < 1:
             return annotate.im
