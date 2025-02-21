@@ -11,7 +11,7 @@ import numpy as np
 from PySide6.QtCore import QObject, Signal
 from ultralytics import YOLO
 from ultralytics.utils.plotting import Annotator
-from comm import send_fer_class
+from comm import Comm
 ################################################################################
 
 
@@ -32,6 +32,9 @@ class Inference(QObject):
             'pose': self.pose,
             'default_detection': self.detect
         }
+
+        # ABii Communication
+        self.abii_comm = Comm(abii_connected=False)
 
         self.modes = list(self.predict_funcs.keys())
         self.num_modes = len(self.modes)
@@ -196,7 +199,7 @@ class Inference(QObject):
         # Map to correct emotion
         emotion = output
         # Send to ABii
-        send_fer_class(emotion)
+        self.abii_comm.send_fer_class(emotion)
 
     def detect(self, frame):
         # Perform inference

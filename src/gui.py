@@ -8,7 +8,6 @@ from PySide6.QtCore import QTimer, Qt
 from PySide6.QtGui import QImage, QPixmap, QKeyEvent
 from PySide6.QtWidgets import QMainWindow, QLabel
 from generated_files.MainWindow import Ui_MainWindow
-from comm import send_fer_class
 
 
 class MainWindow(QMainWindow):
@@ -57,10 +56,10 @@ class MainWindow(QMainWindow):
                 self.ui.detectVideo.model.cycle_models_down()
             elif event.key() == Qt.Key.Key_P:
                 print('party activated')
-                send_fer_class(3)
+                self.ui.detectVideo.model.abii_comm.send_fer_class(3)
             elif event.key() == Qt.Key.Key_I:
                 print('introduction activated')
-                send_fer_class(4)
+                self.ui.detectVideo.model.abii_comm.send_fer_class(4)
             else:
                 print('invalid key pressed')
         else:
