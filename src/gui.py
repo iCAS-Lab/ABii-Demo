@@ -1,13 +1,14 @@
 """_summary_
 https://www.pythonguis.com/tutorials/pyside6-plotting-matplotlib/
 """
-
+import sys
 import time
 import numpy as np
 from PySide6.QtCore import QTimer, Qt
 from PySide6.QtGui import QImage, QPixmap, QKeyEvent
 from PySide6.QtWidgets import QMainWindow, QLabel
 from generated_files.MainWindow import Ui_MainWindow
+from comm import send_fer_class
 
 
 class MainWindow(QMainWindow):
@@ -41,18 +42,25 @@ class MainWindow(QMainWindow):
             self.prev_press_time = now
             if event.key() == Qt.Key.Key_Space:
                 print('space pressed')
+                self.ui.detectVideo.model.detect_emotion()
             elif event.key() == Qt.Key.Key_Left:
                 print('left pressed')
+                self.ui.detectVideo.model.next_detection()
             elif event.key() == Qt.Key.Key_Right:
                 print('right pressed')
+                self.ui.detectVideo.model.prev_detection()
             elif event.key() == Qt.Key.Key_Up:
                 print('up pressed')
+                self.ui.detectVideo.model.cycle_models_up()
             elif event.key() == Qt.Key.Key_Down:
                 print('down pressed')
+                self.ui.detectVideo.model.cycle_models_down()
             elif event.key() == Qt.Key.Key_P:
                 print('party activated')
+                send_fer_class(3)
             elif event.key() == Qt.Key.Key_I:
                 print('introduction activated')
+                send_fer_class(4)
             else:
                 print('invalid key pressed')
         else:

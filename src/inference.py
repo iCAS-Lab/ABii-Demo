@@ -6,10 +6,12 @@ import sys
 import cv2
 import matplotlib.pyplot as plt
 import torch
+import gc
 import numpy as np
 from PySide6.QtCore import QObject, Signal
 from ultralytics import YOLO
 from ultralytics.utils.plotting import Annotator
+from comm import send_fer_class
 ################################################################################
 
 
@@ -17,28 +19,29 @@ class Inference(QObject):
 
     update_num_heads = Signal(int)
 
-    def __init__(
-        self,
-        mode: str = 'default_detection'
-    ):
+    def __init__(self):
         super().__init__()
         # List of models
-        self.head_detect = './src/models/face_det.pt'
+        self.head_model = './src/models/face_det.pt'
         self.emotion_model = './src/models/emotion.pt'
         self.pose_model = './src/models/yolo11n-pose.pt'
         self.detect_model = './src/models/yolo11n.pt'
 
         self.predict_funcs = {
-            'detect_emotion': self.detect_emotion,
+            'detect_emotion': self.detect_head,
             'pose': self.pose,
             'default_detection': self.detect
         }
 
-        # Sanity check the modes
-        if mode in list(self.predict_funcs.keys()):
-            self.mode = mode
-        else:
-            raise Exception(f'Inference mode must be in:\n{self.valid_modes}')
+        self.modes = list(self.predict_funcs.keys())
+        self.num_modes = len(self.modes)
+        self.mode_idx = 0
+        self.mode = self.modes[self.mode_idx]
+
+        self.use_max = True
+        self.focus_idx = 0
+        self.num_detections = 0
+        self.focus_frame = None
 
         # YOLO Model
         self.head_detection = None
@@ -94,79 +97,127 @@ class Inference(QObject):
     def update_stats(self):
         pass
 
+    def next_detection(self):
+        self.use_max = False
+        self.focus_idx = (self.focus_idx + 1) % self.num_detections
+
+    def prev_detection(self):
+        self.use_max = False
+        self.focus_idx = (self.focus_idx - 1) % self.num_detections
+
+    def reset(self):
+        self.use_max = True
+        self.focus_idx = 0
+        self.mode_idx = 0
+        self.mode = self.modes[self.mode_idx]
+
+    def cycle_models_up(self):
+        self.mode_idx = (self.mode_idx + 1) % self.num_modes
+        self.mode = self.modes[self.mode_idx]
+        self.load_models()
+
+    def cycle_models_down(self):
+        self.mode_idx = (self.mode_idx - 1) % self.num_modes
+        self.mode = self.modes[self.mode_idx]
+        self.load_models()
+
     def load_models(self):
         if self.mode == 'detect_emotion':
-            del self.pose_detection
-            del self.default_detection
-            self.head_detection = YOLO(self.head_detect, task='detect')
+            (self.pose_detection,
+             self.default_detection) = (None, None)
+            self.head_detection = YOLO(self.head_model, task='detect')
             self.emotion_classifier = self.emotion_model
         elif self.mode == 'pose':
-            del self.head_detection
-            del self.emotion_classifier
-            del self.default_detection
+            (self.head_detection,
+             self.emotion_classifier,
+             self.default_detection) = (None, None, None)
             self.pose_detection = YOLO(self.pose_model, task='pose')
         elif self.mode == 'default_detection':
-            del self.head_detection
-            del self.emotion_classifier
-            del self.pose_detection
+            (self.head_detection,
+             self.emotion_classifier,
+             self.pose_detection) = (None, None, None)
             self.default_detection = YOLO(self.detect_model,  task='detect')
+        # TODO: Check that this actually reduces memory consumption
+        gc.collect()
 
-    def detect_emotion(self, frame):
+    def detect_head(self, frame):
+        annotate = Annotator(frame)
         outputs = self.head_detection(frame, verbose=False)
         classes: torch.Tensor = outputs[0].boxes.cls.int()
         classes = classes.numpy()
         classes = np.where(classes == 1)[0]
+        confidence = outputs[0].boxes.conf
 
         # Convert types to numpy arrays
-        head_xyxy = outputs[0].boxes.xyxy.numpy()
-        head_xywh = outputs[0].boxes.xywh.numpy()
+        detections_xyxy = outputs[0].boxes.xyxy.numpy()
+        detections_xywh = outputs[0].boxes.xywh.numpy()
 
         # Only get the heads
-        head_boxes_xyxy = head_xyxy[classes]
-        head_boxes_xywh = head_xywh[classes]
+        head_boxes_xyxy = detections_xyxy[classes]
+        head_boxes_xywh = detections_xywh[classes]
+
+        # Update the number of detections
+        self.num_detections = len(head_boxes_xyxy)
+
+        if self.num_detections < 1:
+            return annotate.im
 
         # Extract widths and heights from xywh
         head_boxes_w = head_boxes_xywh[:, 2]
         head_boxes_h = head_boxes_xywh[:, 3]
 
         # Compute Area and get the max area
-        areas = head_boxes_w * head_boxes_h
-        max_area_idx = np.argmax(areas)
+        if self.use_max:
+            areas = head_boxes_w * head_boxes_h
+            self.focus_idx = np.argmax(areas)
+
+        # Sanity check the focus index to ensure it is not above the detections
+        if self.focus_idx >= self.num_detections:
+            self.focus_idx = self.num_detections - 1
 
         # Get the head that is closest
-        fx1, fy1, fx2, fy2 = head_boxes_xyxy[max_area_idx]
-        focus_frame = frame[int(fy1): int(fy2), int(fx1): int(fx2)]
+        fx1, fy1, fx2, fy2 = head_boxes_xyxy[self.focus_idx]
+        self.focus_frame = frame[int(fy1): int(fy2), int(fx1): int(fx2)]
 
         # Annotate all boxes onto the frame, set the closest to green border and
         # others to blue border
-        annotate = Annotator(frame)
         for i, box in enumerate(head_boxes_xyxy):
-            if i == max_area_idx:
-                annotate.box_label(box, label='', color=self.focus_box_color)
+            if i == self.focus_idx:
+                annotate.box_label(
+                    box, label=f'{confidence[i]:.2f}', color=self.focus_box_color)
             else:
-                annotate.box_label(box, label='', color=self.default_box_color)
-
-        # TODO: Get the emotion if spacebar is pressed
-
-        # TODO: Sent emotion to ABii
+                annotate.box_label(
+                    box, label=f'{confidence[i]:.2f}', color=self.default_box_color)
 
         return annotate.im
 
+    def detect_emotion(self):
+        output = self.emotion_classifier(self.focus_frame)
+        # Map to correct emotion
+        emotion = output
+        # Send to ABii
+        send_fer_class(emotion)
+
     def detect(self, frame):
+        # Perform inference
         outputs = self.default_detection(frame, verbose=False)
+        # Get the dictionary of class ids (key) mapped to their string class
+        # name (value)
         class_dict = outputs[0].names
+        # Get the tensor containing the detected class ids
         classes: torch.Tensor = outputs[0].boxes.cls.int()
         classes = classes.numpy()
+        # Get the confidence intervals
         confidence = outputs[0].boxes.conf
         # Convert types to numpy arrays
         boxes_xyxy = outputs[0].boxes.xyxy.numpy()
 
-        # Annotate all boxes onto the frame, set the closest to green border and
-        # others to blue border
+        # Annotate all boxes onto the frame with blue border
         annotate = Annotator(frame)
         for i, box in enumerate(boxes_xyxy):
             annotate.box_label(
                 box,
+                # This is the label to display on the bounding box
                 label=f'{class_dict[classes[i]]} {confidence[i]:.2f}',
                 color=self.default_box_color
             )
@@ -175,6 +226,10 @@ class Inference(QObject):
 
     def pose(self, frame):
         pose_results = self.pose_detection(frame, verbose=False)
+
+        # Update the number of detections
+        self.num_detections = len(pose_results[0].keypoints.data)
+        print(len(pose_results[0].keypoints.data))
         annotate = Annotator(frame)
         annotate.kpts(pose_results[0].keypoints.data[0])
         return annotate.im

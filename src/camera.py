@@ -18,7 +18,7 @@ class Camera(QLabel):
         QLabel.__init__(self)
         self.video_size = QSize(1920, 1080)
         self.setup_camera()
-        self.detection_model = Inference()
+        self.model = Inference()
 
     def setup_camera(self):
         """Initialize camera.
@@ -47,7 +47,7 @@ class Camera(QLabel):
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         frame = cv2.flip(frame, 1)
         # Perform detection
-        ann_frame = self.detection_model.predict(frame)
+        ann_frame = self.model.predict(frame)
         # Check that we have valid results
         if ann_frame is not None:
             display_frame = QImage(
