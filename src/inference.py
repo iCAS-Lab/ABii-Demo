@@ -26,11 +26,13 @@ class Inference(QObject):
         self.emotion_model = './src/models/emotion.pt'
         self.pose_model = './src/models/yolo11n-pose.pt'
         self.detect_model = './src/models/yolo11n.pt'
+        self.hand_model = './src/models/hand-pose.pt'
 
         self.predict_funcs = {
-            'detect_emotion': self.detect_head,
+            'detect_head': self.detect_head,
             'pose': self.pose,
-            'default_detection': self.detect
+            'default_detection': self.detect,
+            'detect_hand': self.detect_hand
         }
 
         # ABii Communication
@@ -51,6 +53,7 @@ class Inference(QObject):
         self.emotion_classifier = None
         self.pose_detection = None
         self.default_detection = None
+        self.hand_detection = None
         self.load_models()
 
         # Original Image Size
@@ -113,6 +116,7 @@ class Inference(QObject):
         self.focus_idx = 0
         self.mode_idx = 0
         self.mode = self.modes[self.mode_idx]
+        self.load_models()
 
     def cycle_models_up(self):
         self.mode_idx = (self.mode_idx + 1) % self.num_modes
@@ -125,21 +129,30 @@ class Inference(QObject):
         self.load_models()
 
     def load_models(self):
-        if self.mode == 'detect_emotion':
+        if self.mode == 'detect_head':
             (self.pose_detection,
-             self.default_detection) = (None, None)
+             self.default_detection,
+             self.hand_detection) = (None, None, None)
             self.head_detection = YOLO(self.head_model, task='detect')
             self.emotion_classifier = self.emotion_model
         elif self.mode == 'pose':
             (self.head_detection,
              self.emotion_classifier,
-             self.default_detection) = (None, None, None)
+             self.default_detection,
+             self.hand_detection) = (None, None, None, None)
             self.pose_detection = YOLO(self.pose_model, task='pose')
         elif self.mode == 'default_detection':
             (self.head_detection,
              self.emotion_classifier,
-             self.pose_detection) = (None, None, None)
+             self.pose_detection,
+             self.hand_detection) = (None, None, None, None)
             self.default_detection = YOLO(self.detect_model,  task='detect')
+        elif self.mode == 'detect_hand':
+            (self.head_detection,
+             self.emotion_classifier,
+             self.pose_detection,
+             self.default_detection) = (None, None, None, None)
+            self.hand_detection = YOLO(self.hand_model, task='pose')
         # TODO: Check that this actually reduces memory consumption
         gc.collect()
 
@@ -228,13 +241,44 @@ class Inference(QObject):
         return annotate.im
 
     def pose(self, frame):
+        annotate = Annotator(frame)
+        # Inference
         pose_results = self.pose_detection(frame, verbose=False)
-
         # Update the number of detections
         self.num_detections = len(pose_results[0].keypoints.data)
-        print(len(pose_results[0].keypoints.data))
+        # Return early if there are no detections
+        if self.num_detections < 1:
+            return annotate.im
+        # Get the left and right ear points
+        detected_poses = pose_results[0].keypoints.xy.numpy()
+        people = detected_poses[:, 3:5]
+        print(people.shape)
+        # TODO: Can probably do better than looping.
+        distances = []
+        for ears in people:
+            l_ear, r_ear = ears
+            distances.append(np.sqrt((l_ear[0] - r_ear[0]) **
+                                     2 + (l_ear[1] - r_ear[1])**2))
+        print(distances)
+        closest_pose_idx = np.argmax(distances)
+        annotate.kpts(detected_poses[closest_pose_idx])
+        return annotate.im
+
+    def detect_hand(self, frame):
+        hand_results = self.hand_detection(frame, verbose=False)
+
+        # Update the number of detections
+        self.num_detections = len(hand_results[0].keypoints.data)
+        # print(len(hand_results[0].keypoints.data))
         annotate = Annotator(frame)
-        annotate.kpts(pose_results[0].keypoints.data[0])
+        # Return early if there are no detections
+        if self.num_detections < 1:
+            return annotate.im
+        for i, hands in enumerate(hand_results[0].keypoints.data):
+            annotate.kpts(hands)
+            # Limit number of hands to plot to 2
+            if i == 1:
+                break
         return annotate.im
 
     def predict(self, frame):

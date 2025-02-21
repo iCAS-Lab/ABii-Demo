@@ -39,7 +39,10 @@ class MainWindow(QMainWindow):
         now = time.time()
         if now - self.prev_press_time > self.press_threshold:
             self.prev_press_time = now
-            if event.key() == Qt.Key.Key_Space:
+            if event.key() == Qt.Key.Key_Escape:
+                print('esc pressed')
+                self.ui.detectVideo.model.reset()
+            elif event.key() == Qt.Key.Key_Space:
                 print('space pressed')
                 self.ui.detectVideo.model.detect_emotion()
             elif event.key() == Qt.Key.Key_Left:
