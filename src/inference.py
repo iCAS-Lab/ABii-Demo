@@ -251,7 +251,7 @@ class Inference(QObject):
             return annotate.im
         # Get the left and right ear points
         detected_poses = pose_results[0].keypoints.xy.numpy()
-        people = detected_poses[:, 3:5]
+        people = detected_poses[:, 5:7]
         # print(people.shape)
         # TODO: Can probably do better than looping.
         distances = []
