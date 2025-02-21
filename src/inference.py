@@ -255,10 +255,10 @@ class Inference(QObject):
         # print(people.shape)
         # TODO: Can probably do better than looping.
         distances = []
-        for ears in people:
-            l_ear, r_ear = ears
-            distances.append(np.sqrt((l_ear[0] - r_ear[0]) **
-                                     2 + (l_ear[1] - r_ear[1])**2))
+        for shoulders in people:
+            l_shoulder, r_shoulder = shoulders
+            distances.append(np.sqrt((l_shoulder[0] - r_shoulder[0]) **
+                                     2 + (l_shoulder[1] - r_shoulder[1])**2))
         closest_pose_idx = np.argmax(distances)
         annotate.kpts(detected_poses[closest_pose_idx])
         return annotate.im
