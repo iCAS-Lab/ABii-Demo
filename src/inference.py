@@ -252,14 +252,13 @@ class Inference(QObject):
         # Get the left and right ear points
         detected_poses = pose_results[0].keypoints.xy.numpy()
         people = detected_poses[:, 3:5]
-        print(people.shape)
+        # print(people.shape)
         # TODO: Can probably do better than looping.
         distances = []
         for ears in people:
             l_ear, r_ear = ears
             distances.append(np.sqrt((l_ear[0] - r_ear[0]) **
                                      2 + (l_ear[1] - r_ear[1])**2))
-        print(distances)
         closest_pose_idx = np.argmax(distances)
         annotate.kpts(detected_poses[closest_pose_idx])
         return annotate.im
