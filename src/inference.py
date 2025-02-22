@@ -158,7 +158,7 @@ class Inference(QObject):
 
     def detect_head(self, frame):
         annotate = Annotator(frame)
-        outputs = self.head_detection(frame, verbose=False)
+        outputs = self.head_detection(frame, verbose=False, device='cpu')
         classes: torch.Tensor = outputs[0].boxes.cls.int()
         classes = classes.numpy()
         classes = np.where(classes == 1)[0]
@@ -217,7 +217,7 @@ class Inference(QObject):
     def detect(self, frame):
         annotate = Annotator(frame)
         # Perform inference
-        outputs = self.default_detection(frame, verbose=False)
+        outputs = self.default_detection(frame, verbose=False, device='cpu')
         # Get the dictionary of class ids (key) mapped to their string class
         # name (value)
         class_dict = outputs[0].names
@@ -247,7 +247,7 @@ class Inference(QObject):
     def pose(self, frame):
         annotate = Annotator(frame)
         # Inference
-        pose_results = self.pose_detection(frame, verbose=False)
+        pose_results = self.pose_detection(frame, verbose=False, device='cpu')
         # Update the number of detections
         self.num_detections = len(pose_results[0].keypoints.data)
         # Return early if there are no detections
@@ -269,7 +269,7 @@ class Inference(QObject):
 
     def detect_hand(self, frame):
         annotate = Annotator(frame)
-        hand_results = self.hand_detection(frame, verbose=False)
+        hand_results = self.hand_detection(frame, verbose=False, device='cpu')
         # Update the number of detections
         self.num_detections = len(hand_results[0].keypoints.data)
         # print(len(hand_results[0].keypoints.data))
