@@ -158,6 +158,8 @@ class Inference(QObject):
 
     def detect_head(self, frame):
         annotate = Annotator(frame)
+        if self.head_detection is None:
+            return annotate.im
         outputs = self.head_detection(frame, verbose=False, device='cpu')
         classes: torch.Tensor = outputs[0].boxes.cls.int()
         classes = classes.numpy()
@@ -208,15 +210,17 @@ class Inference(QObject):
         return annotate.im
 
     def detect_emotion(self):
-        output = self.emotion_classifier(self.focus_frame)
+        # output = self.emotion_classifier(self.focus_frame)
         # Map to correct emotion
-        emotion = output
+        emotion = 1
         # Send to ABii
         self.abii_comm.send_fer_class(emotion)
 
     def detect(self, frame):
         annotate = Annotator(frame)
         # Perform inference
+        if self.default_detection is None:
+            return annotate.im
         outputs = self.default_detection(frame, verbose=False, device='cpu')
         # Get the dictionary of class ids (key) mapped to their string class
         # name (value)
@@ -247,6 +251,8 @@ class Inference(QObject):
     def pose(self, frame):
         annotate = Annotator(frame)
         # Inference
+        if self.pose_detection is None:
+            return annotate.im
         pose_results = self.pose_detection(frame, verbose=False, device='cpu')
         # Update the number of detections
         self.num_detections = len(pose_results[0].keypoints.data)
@@ -269,6 +275,8 @@ class Inference(QObject):
 
     def detect_hand(self, frame):
         annotate = Annotator(frame)
+        if self.hand_detection is None:
+            return annotate.im
         hand_results = self.hand_detection(frame, verbose=False, device='cpu')
         # Update the number of detections
         self.num_detections = len(hand_results[0].keypoints.data)
