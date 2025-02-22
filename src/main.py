@@ -6,7 +6,8 @@ from gui import MainWindow
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
-    print(app.primaryScreen().size().toTuple())
+    screen_size = app.primaryScreen().size().toTuple()
+    print(screen_size)
     main_window = MainWindow()
-    main_window.resize(1920, 1080)
+    main_window.resize(screen_size[0], screen_size[1])
     sys.exit(app.exec())

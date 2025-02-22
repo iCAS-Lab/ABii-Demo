@@ -29,7 +29,8 @@ class MainWindow(QMainWindow):
         # Scale contents to GUI, set False to preserve images quality
         self.ui.detectVideo.setScaledContents(True)
 
-        self.showFullScreen()
+        # self.showFullScreen()
+        self.show()
 
     def connect_signals(self):
         self.ui.detectVideo.update_frame.connect(self.update_cameras)
