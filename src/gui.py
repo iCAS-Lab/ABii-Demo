@@ -63,6 +63,9 @@ class MainWindow(QMainWindow):
             elif event.key() == Qt.Key.Key_I:
                 print('introduction activated')
                 self.ui.detectVideo.model.abii_comm.send_fer_class(4)
+            elif event.key() == Qt.Key.Key_Q:
+                print('quitting')
+                sys.exit()
             else:
                 print('invalid key pressed')
         else:
