@@ -266,6 +266,8 @@ class Inference(QObject):
         # TODO: Can probably do better than looping.
         distances = []
         for shoulders in people:
+            if len(shoulders) < 2:
+                return annotate.im
             l_shoulder, r_shoulder = shoulders
             distances.append(np.sqrt((l_shoulder[0] - r_shoulder[0]) **
                                      2 + (l_shoulder[1] - r_shoulder[1])**2))
