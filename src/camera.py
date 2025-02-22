@@ -23,7 +23,7 @@ class Camera(QLabel):
     def setup_camera(self):
         """Initialize camera.
         """
-        self.capture = cv2.VideoCapture(1)
+        self.capture = cv2.VideoCapture(0)
         self.capture.set(cv2.CAP_PROP_FRAME_WIDTH,
                          self.video_size.width())
         self.capture.set(cv2.CAP_PROP_FRAME_HEIGHT,
