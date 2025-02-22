@@ -16,7 +16,7 @@ class Camera(QLabel):
 
     def __init__(self, parent):
         QLabel.__init__(self)
-        self.video_size = QSize(1920, 1080)
+        self.video_size = QSize(3840, 2160)
         self.setup_camera()
         self.model = Inference()
 
@@ -30,7 +30,7 @@ class Camera(QLabel):
                          self.video_size.height())
         self.capture.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter.fourcc(
             'M', 'J', 'P', 'G'))  # depends on fourcc available camera
-        self.capture.set(cv2.CAP_PROP_FPS, 30)
+        self.capture.set(cv2.CAP_PROP_FPS, 60)
 
         self.timer = QTimer()
         self.timer.timeout.connect(self.display_video_stream)
