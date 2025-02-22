@@ -60,6 +60,11 @@ class Ui_MainWindow(object):
 
         self.verticalLayout_8.addWidget(self.detectLabel)
 
+        self.label = QLabel(self.detect)
+        self.label.setObjectName(u"label")
+
+        self.verticalLayout_8.addWidget(self.label)
+
         self.detectVideo = Camera(self.detect)
         self.detectVideo.setObjectName(u"detectVideo")
         sizePolicy.setHeightForWidth(self.detectVideo.sizePolicy().hasHeightForWidth())
@@ -80,7 +85,8 @@ class Ui_MainWindow(object):
 
     def retranslateUi(self, MainWindow):
         MainWindow.setWindowTitle(QCoreApplication.translate("MainWindow", u"ABii Demo", None))
-        self.detectLabel.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p><span style=\" font-size:24pt; font-weight:700; color:#ffffff;\">Camera</span></p></body></html>", None))
+        self.detectLabel.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p><span style=\" font-size:24pt; font-weight:700; color:#ffffff;\">ABii the Smart Robot Tutor</span></p></body></html>", None))
+        self.label.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p align=\"center\"><span style=\" font-size:18pt; font-weight:700;\">A Collaboration Between:</span></p><p align=\"center\"><span style=\" font-size:18pt; font-weight:700;\">Intelligent Circuits, Architectures, and Systems (iCAS) Lab &amp; VAN Robotics</span></p></body></html>", None))
         self.detectVideo.setText("")
     # retranslateUi
 
